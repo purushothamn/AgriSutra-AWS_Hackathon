@@ -30,3 +30,5 @@ PROJECT TITLE: AgriSutra – The Holistic Farm Intelligence System
   Data Source: RAG (Retrieval Augmented Generation) pipeline connected to a vector database of agricultural handbooks.
   Hardware: Not really a concern for the app, we just need to focus on our endpoints.
   Security: TBA
+
+"This code is for demonstration purposes for the AWS AI for Bharat Hackathon only. All rights reserved. No part of this codebase may be used without explicit permission."
