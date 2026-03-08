@@ -10,4 +10,4 @@ pydub==0.25.1
 SpeechRecognition
 gtts==2.5.1
 setuptools
-
+streamlit-mic-recorder
