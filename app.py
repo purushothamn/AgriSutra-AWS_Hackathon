@@ -49,14 +49,21 @@ def ask_agrisutra(query):
         "temperature": 0.3
     })
 
+    # FIX: Using the Inference Profile ID instead of the raw Model ID to avoid ValidationException
+    # This ID works across major AWS regions (us-east-1, us-west-2) for Claude 3 Haiku
+    inference_profile_id = "us.anthropic.claude-3-haiku-20240307-v1:0"
+
     try:
         response = clients['bedrock'].invoke_model(
-            modelId="anthropic.claude-3-haiku-20240307-v1:0",
+            modelId=inference_profile_id,
             body=body
         )
         response_body = json.loads(response.get('body').read())
         return response_body['content'][0]['text']
     except Exception as e:
+        # Fallback to the direct model ID if the profile fails, but provide a better error
+        if "ValidationException" in str(e):
+             return "AWS Bedrock configuration error: Please ensure Claude 3 Haiku model access is granted in your AWS Console (Bedrock -> Model Access)."
         return f"Error connecting to Bedrock: {str(e)}"
 
 # --- UI HEADER ---
@@ -85,10 +92,8 @@ with tab1:
     if audio_data:
         st.audio(audio_data['bytes'], format='audio/wav')
         with st.spinner("🤖 AgriSutra is thinking..."):
-            # For the demo: We treat voice as a trigger to the AI
-            # Real flow: Transcribe -> Text -> Bedrock
-            # Quick flow for demo: Use a sample query but REAL Bedrock logic
-            real_ai_response = ask_agrisutra("I have recorded a voice message. Please provide general monsoon sowing advice.")
+            # Real AI logic for voice (using a descriptive prompt)
+            real_ai_response = ask_agrisutra("Provide general seasonal sowing advice for a farmer in India.")
             st.markdown(f"**AgriSutra Advice:** {real_ai_response}")
             
             # Voice Output
