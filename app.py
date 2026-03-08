@@ -12,14 +12,12 @@ import io
 import base64
 from PIL import Image
 from agrisutra.orchestrator import LambdaOrchestrator
-from streamlit_mic_recorder import mic_recorder
-audio = mic_recorder(start_prompt='🎤 Record', stop_prompt='⏹️ Stop', key='rec')
 
-# Page configuration
+# Page configuration - MUST be first Streamlit command
 st.set_page_config(
     page_title="AgriSutra - Farm Intelligence",
     page_icon="�",  # Microphone icon matching your logo
-    layout="centered",
+    layout="wide",
     initial_sidebar_state="collapsed"
 )
 
@@ -311,44 +309,28 @@ def initialize_session_state():
     if 'orchestrator' not in st.session_state:
         try:
             # ==================== CONFIGURATION ====================
-            # Groq API Key for LLM
+            # Groq API Key for LLM and Whisper Speech Recognition
             groq_api_key = "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"
-            
-            # AWS Credentials for Transcribe (Speech-to-Text) - REQUIRED
-            # Your AWS credentials are already configured
-            aws_access_key_id = "AKIA44QOQ7WEC6YRG3UX"
-            aws_secret_access_key = "fLNEUzLFU5tnnyGNS/dHB4+v51rzpT4VMAtoNLkm"
-            aws_bucket_name = "agrisutra-general"  # S3 bucket name
-            # ======================================================
             
             # Try to get from Streamlit secrets if available
             try:
-                if hasattr(st, 'secrets'):
-                    if 'GROQ_API_KEY' in st.secrets:
-                        groq_api_key = st.secrets['GROQ_API_KEY']
-                    if 'AWS_ACCESS_KEY_ID' in st.secrets:
-                        aws_access_key_id = st.secrets['AWS_ACCESS_KEY_ID']
-                    if 'AWS_SECRET_ACCESS_KEY' in st.secrets:
-                        aws_secret_access_key = st.secrets['AWS_SECRET_ACCESS_KEY']
-                    if 'AWS_BUCKET_NAME' in st.secrets:
-                        aws_bucket_name = st.secrets['AWS_BUCKET_NAME']
+                if hasattr(st, 'secrets') and 'GROQ_API_KEY' in st.secrets:
+                    groq_api_key = st.secrets['GROQ_API_KEY']
             except Exception:
                 pass
+            # ======================================================
             
             if not groq_api_key:
                 st.error("❌ Groq API key not found. Please configure it.")
                 st.stop()
             
-            # Initialize orchestrator with AWS Transcribe only
+            # Initialize orchestrator with Groq Whisper
             st.session_state.orchestrator = LambdaOrchestrator(
-                groq_api_key=groq_api_key,
-                aws_access_key_id=aws_access_key_id,
-                aws_secret_access_key=aws_secret_access_key,
-                aws_bucket_name=aws_bucket_name
+                groq_api_key=groq_api_key
             )
             
-            st.success("✅ Groq LLM + AWS Transcribe connected!")
-            st.info("🎤 Voice input uses AWS Transcribe for Indian languages")
+            st.success("✅ Groq LLM + Whisper connected! Full AI responses enabled.")
+            st.info("🎤 Voice input uses Groq Whisper (fast & accurate for Indian languages)")
             
         except Exception as e:
             st.error(f"Failed to initialize orchestrator: {str(e)}")

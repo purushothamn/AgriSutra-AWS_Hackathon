@@ -16,7 +16,7 @@ from agrisutra.safety import ResilienceSentry
 from agrisutra.agents import IntentRouter, SentryAgent, EconomistAgent, Intent
 from agrisutra.translation import ContextTranslator
 from agrisutra.groq_client import GroqClient
-from agrisutra.aws_speech_recognition import AWSSpeechRecognition
+from agrisutra.speech_recognition import GroqSpeechRecognition
 
 
 @dataclass
@@ -41,18 +41,18 @@ class LambdaOrchestrator:
     def __init__(
         self, 
         groq_api_key: str,
-        aws_access_key_id: str,
-        aws_secret_access_key: str,
-        aws_bucket_name: str = 'agrisutra-audio-temp'
+        aws_access_key_id: Optional[str] = None,
+        aws_secret_access_key: Optional[str] = None,
+        aws_bucket_name: Optional[str] = None
     ):
         """
         Initialize the orchestrator with all required components
         
         Args:
-            groq_api_key: Groq API key for LLM (required)
-            aws_access_key_id: AWS access key for Transcribe (required)
-            aws_secret_access_key: AWS secret key for Transcribe (required)
-            aws_bucket_name: S3 bucket name for audio storage
+            groq_api_key: Groq API key for LLM and Whisper (required)
+            aws_access_key_id: AWS access key (optional, kept for backward compatibility)
+            aws_secret_access_key: AWS secret key (optional, kept for backward compatibility)
+            aws_bucket_name: S3 bucket name (optional, kept for backward compatibility)
         """
         self.voice_pipeline = VoicePipeline(groq_api_key=groq_api_key, use_mock=False)
         self.resilience_sentry = ResilienceSentry()
@@ -62,14 +62,9 @@ class LambdaOrchestrator:
         self.context_translator = ContextTranslator()
         self.llm_client = GroqClient(api_key=groq_api_key)
         
-        # Initialize AWS Transcribe for speech recognition
-        self.speech_recognition = AWSSpeechRecognition(
-            region_name='ap-south-1',
-            bucket_name=aws_bucket_name,
-            aws_access_key_id=aws_access_key_id,
-            aws_secret_access_key=aws_secret_access_key
-        )
-        print("✅ Using AWS Transcribe for speech recognition")
+        # Initialize Groq Whisper for speech recognition (fast and accurate)
+        self.speech_recognition = GroqSpeechRecognition(api_key=groq_api_key)
+        print("✅ Using Groq Whisper for speech recognition (fast & accurate)")
         
         # Simple in-memory cache for MVP
         self.cache = {}

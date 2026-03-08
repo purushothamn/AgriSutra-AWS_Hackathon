@@ -5,14 +5,14 @@ AgriSutra is a vernacular, voice-first farm intelligence system designed for rur
 ## Features
 
 - **Real AI Responses**: Powered by Groq's Llama 3.3 70B LLM
-- **Voice Input**: Real microphone input with Groq Whisper speech-to-text
+- **Voice Input**: Real microphone input with Groq Whisper speech-to-text (fast & accurate)
 - **Multilingual Support**: Hindi, Kannada, Tamil, and English
 - **Specialized Agents**: 
   - Sentry Agent for weather alerts and disaster management
   - Economist Agent for crop budgeting and ROI calculations
 - **Safety Governance**: Resilience Sentry validates queries and responses to prevent harmful advice
 - **Technical Term Translation**: Context Translator provides local language translations with visual and audio aids
-- **Fast & Reliable**: Sub-2-second response times with Groq
+- **Fast & Reliable**: Sub-2-second response times with Groq's optimized inference
 
 ## Architecture
 

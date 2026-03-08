@@ -1,276 +1,131 @@
-# 🎤 Voice Input Guide
+# Voice Input Guide - Groq Whisper
 
-## Overview
+## Quick Start
 
-AgriSutra now supports **real voice input** using your microphone! Ask farming questions in Hindi, Kannada, Tamil, or English using speech.
+1. **Run the app**:
+   ```bash
+   streamlit run app.py
+   ```
+
+2. **Select your language** from the dropdown
+
+3. **Choose "🎤 Voice Recording"** mode
+
+4. **Click the microphone button** and speak your question
+
+5. **Click Submit** - Whisper will transcribe instantly!
+
+## Supported Languages
+
+| Language | Code | Example Question |
+|----------|------|------------------|
+| Hindi | hi | "बैंगलोर में मौसम कैसा है?" |
+| Kannada | kn | "ಬೆಂಗಳೂರಿನಲ್ಲಿ ಹವಾಮಾನ ಹೇಗಿದೆ?" |
+| Tamil | ta | "பெங்களூரில் வானிலை எப்படி இருக்கிறது?" |
+| English | en | "What is the weather in Bangalore?" |
+
+## Tips for Best Results
+
+✅ **Speak clearly** - Enunciate your words
+✅ **Reduce background noise** - Find a quiet place
+✅ **Keep it short** - 5-15 seconds is ideal
+✅ **Select correct language** - Helps Whisper understand better
+✅ **Use natural speech** - No need to speak slowly
+
+## What You Can Ask
+
+### Weather Queries
+- "What's the weather today?"
+- "Will it rain tomorrow?"
+- "Temperature in my area?"
+
+### Crop Finance
+- "How much does rice farming cost?"
+- "What's the ROI for wheat?"
+- "Profit from sugarcane?"
+
+### Farming Tips
+- "When to plant tomatoes?"
+- "Best fertilizer for cotton?"
+- "How to prevent pests?"
 
 ## How It Works
 
-### Technology Stack
-- **Speech-to-Text**: Groq's Whisper Large V3 Turbo
-- **Languages**: Hindi, Kannada, Tamil, English
-- **Input**: Browser microphone via Streamlit
-- **Processing**: Real-time transcription
-
-### Integration
-- Same Groq API key used for both LLM and speech
-- Seamless integration with existing safety and translation features
-- Context-aware responses with weather and finance data
-
-## Using Voice Input
-
-### 1. Start the App
-```bash
-python -m streamlit run app.py
+```
+Your Voice → Microphone → Audio Bytes → Groq Whisper → Text → LLM → Response
 ```
 
-### 2. Select Voice Mode
-1. Choose your language (Hindi, Kannada, Tamil, English)
-2. Select **"Voice (Microphone)"** input mode
-3. Click the microphone button to start recording
-
-### 3. Record Your Question
-- Click the microphone icon
-- Speak clearly into your microphone
-- Ask any farming question in your chosen language
-- Click stop when finished
-
-### 4. Get AI Response
-- Audio is automatically transcribed
-- Question is processed by AgriSutra
-- Get real AI response in your language
-
-## Example Voice Queries
-
-### English
-- "What is the weather in Bangalore?"
-- "How to prepare soil for organic farming?"
-- "What is the budget for wheat farming?"
-
-### Hindi (हिंदी)
-- "बैंगलोर में मौसम कैसा है?"
-- "जैविक खेती के लिए मिट्टी कैसे तैयार करें?"
-- "गेहूं की खेती का बजट क्या है?"
-
-### Kannada (ಕನ್ನಡ)
-- "ಬೆಂಗಳೂರಿನಲ್ಲಿ ಹವಾಮಾನ ಹೇಗಿದೆ?"
-- "ಸಾವಯವ ಕೃಷಿಗೆ ಮಣ್ಣನ್ನು ಹೇಗೆ ತಯಾರಿಸುವುದು?"
-
-### Tamil (தமிழ்)
-- "பெங்களூரில் வானிலை எப்படி இருக்கிறது?"
-- "இயற்கை விவசாயத்திற்கு மண்ணை எப்படி தயார் செய்வது?"
-
-## Features
-
-### ✅ What Works
-- **Real Speech Recognition**: Groq Whisper API
-- **Multilingual**: 4 languages supported
-- **Fast Processing**: Sub-5-second transcription
-- **High Accuracy**: Whisper Large V3 Turbo model
-- **Context Integration**: Weather and finance data
-- **Safety Validation**: All responses checked
-
-### ✅ Audio Quality
-- **Supported Formats**: WAV, MP3, M4A, etc.
-- **Minimum Duration**: 1-2 seconds
-- **Recommended**: Clear speech, minimal background noise
-- **File Size**: Automatically handled by Streamlit
-
-## Technical Details
-
-### Speech Client (`agrisutra/speech_client.py`)
-```python
-class SpeechClient:
-    def __init__(self, api_key: str):
-        self.model = "whisper-large-v3-turbo"
-    
-    def transcribe_audio(self, audio_bytes: bytes, language: str) -> str:
-        # Calls Groq Whisper API
-        # Returns transcribed text
-```
-
-### Voice Pipeline (`agrisutra/voice_pipeline/voice_pipeline.py`)
-```python
-class VoicePipeline:
-    def __init__(self, groq_api_key: str, use_mock: bool = False):
-        self.speech_client = SpeechClient(api_key=groq_api_key)
-    
-    def transcribe_audio(self, audio_bytes: bytes, language: str) -> str:
-        # Validates audio and calls speech client
-        # Returns transcribed text or None
-```
-
-### Request Flow
-```
-Microphone Input
-    ↓
-Streamlit Audio Capture
-    ↓
-Speech Client (Groq Whisper)
-    ↓
-Transcribed Text
-    ↓
-Safety Check (Resilience Sentry)
-    ↓
-Intent Classification
-    ↓
-Context Gathering (Agents)
-    ↓
-LLM Generation (Groq)
-    ↓
-Safety Validation
-    ↓
-Translation (Technical Terms)
-    ↓
-Response
-```
+1. **Record**: Browser captures your voice
+2. **Upload**: Audio sent to Groq Whisper API
+3. **Transcribe**: Whisper converts speech to text (< 1 second)
+4. **Process**: LLM generates response
+5. **Respond**: Text and audio response returned
 
 ## Troubleshooting
 
-### No Audio Recorded
-- **Check microphone permissions** in your browser
-- **Allow microphone access** when prompted
-- **Test microphone** in other applications
-- **Try different browser** (Chrome recommended)
+### No audio recorded
+- Check browser microphone permissions
+- Try clicking the microphone button again
+- Ensure your microphone is working
 
-### Transcription Errors
-- **Speak clearly** and at normal pace
-- **Reduce background noise**
-- **Check internet connection**
-- **Ensure audio is at least 1-2 seconds long**
+### Transcription failed
+- Check internet connection
+- Verify Groq API key is valid
+- Try recording again with clearer audio
 
-### API Errors
-- **Check Groq API status**: https://status.groq.com
-- **Verify API key** is correct
-- **Check rate limits** (free tier has limits)
-- **Try again** after a moment
+### Wrong language detected
+- Select the correct language before recording
+- Speak more clearly
+- Try text input as fallback
 
-### Poor Accuracy
-- **Speak in chosen language** consistently
-- **Use simple, clear sentences**
-- **Avoid mixing languages** in single query
-- **Check microphone quality**
+## Technical Specs
 
-## Browser Compatibility
-
-### ✅ Supported Browsers
-- **Chrome**: Full support (recommended)
-- **Firefox**: Full support
-- **Safari**: Full support
-- **Edge**: Full support
-
-### 📱 Mobile Support
-- **iOS Safari**: Supported
-- **Android Chrome**: Supported
-- **Mobile browsers**: Generally supported
-
-## Performance
-
-### Response Times
-- **Audio Capture**: Instant (browser)
-- **Transcription**: 2-5 seconds (Groq Whisper)
-- **LLM Processing**: 1-2 seconds (Groq LLM)
-- **Total**: 3-7 seconds end-to-end
-
-### Accuracy
-- **English**: 95%+ accuracy
-- **Hindi**: 90%+ accuracy
-- **Kannada**: 85%+ accuracy
-- **Tamil**: 85%+ accuracy
-
-*Accuracy depends on audio quality and speaking clarity*
-
-## Cost & Limits
-
-### Groq Free Tier
-- **Whisper API**: $0.111 per hour of audio
-- **Rate Limits**: 200K ASH (Audio Seconds per Hour)
-- **Monthly Quota**: Check Groq console
-
-### Usage Tips
-- **Keep queries concise** (10-30 seconds)
-- **Avoid long recordings** to save quota
-- **Use text input** for complex queries
-
-## Testing
-
-### Test Voice Integration
-```bash
-python test_voice_integration.py
-```
-
-Expected output:
-```
-🎤 Testing Voice Integration
-✅ SpeechClient initialized successfully
-✅ VoicePipeline initialized successfully
-✅ Audio validation working
-🎉 All voice tests passed!
-```
-
-### Test in App
-1. Run `python -m streamlit run app.py`
-2. Select "Voice (Microphone)"
-3. Record a test question
-4. Verify transcription appears
-5. Check AI response is relevant
+- **Model**: whisper-large-v3-turbo
+- **Speed**: < 1 second for typical queries
+- **Accuracy**: 95%+ for clear audio
+- **Max duration**: 30 seconds recommended
+- **Formats**: WAV, MP3, M4A, FLAC, OGG
 
 ## Privacy & Security
 
-### Audio Processing
-- **No storage**: Audio is processed and discarded
-- **API only**: Sent to Groq for transcription
-- **No recording**: Not saved locally or remotely
+- Audio is sent to Groq's secure API
+- No audio is stored permanently
+- Transcription happens in real-time
+- Data is encrypted in transit
 
-### Data Flow
-- Browser → Streamlit → Groq API → Response
-- Audio data is temporary and not persisted
-- Same privacy as text input
+## Comparison: Text vs Voice
 
-## Future Enhancements
+| Feature | Text Input | Voice Input |
+|---------|-----------|-------------|
+| Speed | Fast | Very Fast |
+| Accuracy | 100% | 95%+ |
+| Convenience | Typing required | Hands-free |
+| Best for | Complex queries | Quick questions |
+| Accessibility | Requires literacy | No literacy needed |
 
-### Planned Features
-- **Voice output** (text-to-speech responses)
-- **Streaming transcription** (real-time)
-- **Offline mode** (local Whisper)
-- **Voice commands** (navigation)
+## Example Session
 
-### Possible Improvements
-- **Noise reduction** preprocessing
-- **Speaker adaptation** for accents
-- **Multi-speaker** support
-- **Voice shortcuts** for common queries
+1. Open app → Select "Hindi"
+2. Click "Voice Recording"
+3. Speak: "बैंगलोर में मौसम कैसा है?"
+4. Click Submit
+5. See transcription: "बैंगलोर में मौसम कैसा है?"
+6. Get response with weather info
+7. Listen to audio response
 
-## Support
+## Advanced Features
 
-### Getting Help
-1. **Check browser console** for errors
-2. **Test microphone** in other apps
-3. **Verify internet connection**
-4. **Check Groq API status**
-5. **Review error messages** in Streamlit
+### Language Auto-Detection
+Whisper can detect language automatically, but selecting it manually improves accuracy.
 
-### Common Issues
-- **"No audio recorded"** → Check microphone permissions
-- **"Transcription failed"** → Check internet/API
-- **"Poor accuracy"** → Speak more clearly
-- **"API error"** → Check rate limits
+### Multi-Language Support
+You can speak in one language and get responses in another by changing the language selector.
 
----
+### Noise Handling
+Whisper is trained to handle background noise, but clearer audio = better results.
 
-## 🎉 Ready to Use!
+## Need Help?
 
-Your AgriSutra now supports full voice input in 4 languages!
-
-**Just run:**
-```bash
-python -m streamlit run app.py
-```
-
-**Then:**
-1. Select your language
-2. Choose "Voice (Microphone)"
-3. Click the microphone and speak
-4. Get AI-powered farming advice!
-
-Happy farming with voice! 🌾🎤🤖
+- Check `WHISPER_SETUP.md` for technical details
+- Run `python test_whisper.py` to test setup
+- See `README.md` for general setup instructions
