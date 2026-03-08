@@ -12,7 +12,8 @@ import io
 import base64
 from PIL import Image
 from agrisutra.orchestrator import LambdaOrchestrator
-
+from streamlit_mic_recorder import mic_recorder
+audio = mic_recorder(start_prompt='🎤 Record', stop_prompt='⏹️ Stop', key='rec')
 
 # Page configuration
 st.set_page_config(
