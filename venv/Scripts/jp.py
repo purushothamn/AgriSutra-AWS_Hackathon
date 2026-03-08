@@ -1,4 +1,4 @@
-#!C:\Users\Raghav\Downloads\AgriSutra-AWS_Hackathon-Shubham-proto-code\venv\Scripts\python.exe
+#!C:\Users\Raghav\Downloads\AgriSutra-AWS_Hackathon-Shubham-proto-code\AgriSutra-AWS_Hackathon-Shubham-proto-code\venv\Scripts\python.exe
 
 import sys
 import json
