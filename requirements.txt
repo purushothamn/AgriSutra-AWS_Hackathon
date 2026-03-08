@@ -1,5 +1,5 @@
-streamlit==1.31.0
-gTTS==2.5.1
-streamlit-mic-recorder==0.0.3
-boto3==1.34.50
-requests==2.31.0
+streamlit
+gTTS
+streamlit-mic-recorder
+boto3
+requests
