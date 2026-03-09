@@ -1,135 +1,118 @@
 import streamlit as st
-
-# 1. Page Configuration (Must be first)
-st.set_page_config(
-    page_title="AgriSutra AI",
-    page_icon="🌾",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-import tempfile
-import time
-import json
 import boto3
-from gtts import gTTS
-from streamlit_mic_recorder import mic_recorder
+import json
+import io
+import time
 
-# --- AWS CLIENT SETUP ---
-def get_aws_clients():
-    """Initializes AWS clients using Streamlit Secrets."""
-    try:
-        session = boto3.Session(
-            aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
-            aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
-            region_name=st.secrets.get("AWS_DEFAULT_REGION", "us-east-2")
-        )
-        return {
-            "s3": session.client('s3'),
-            "bedrock": session.client('bedrock'), 
-            "runtime": session.client('bedrock-runtime') 
-        }
-    except Exception as e:
-        st.sidebar.error(f"AWS Configuration Error: {e}")
-        return None
-
-clients = get_aws_clients()
+# --- AWS CONFIGURATION ---
+# These are pulled from your previous setup or st.secrets
+AWS_REGION = "us-east-1"
 S3_BUCKET = st.secrets.get("AWS_S3_BUCKET_NAME", "agrisutra-general")
 
-# --- DEBUG: CHECK MODEL ACCESS ---
-with st.sidebar:
-    st.header("🛠️ AWS Debugger")
-    if clients:
-        if st.button("Check Model Access"):
-            try:
-                models = clients['bedrock'].list_foundation_models(byOutputModality='TEXT')
-                accessible = [m['modelId'] for m in models['modelSummaries'] if 'anthropic' in m['modelId']]
-                st.write("✅ Accessible Anthropic Models:", accessible)
-                
-                profiles = clients['bedrock'].list_inference_profiles()
-                st.write("✅ Accessible Profiles:", [p['inferenceProfileId'] for p in profiles['inferenceProfileSummaries']])
-            except Exception as e:
-                st.error(f"Could not fetch models: {e}")
-    else:
-        st.error("No AWS clients initialized.")
+# Initialize AWS Clients
+session = boto3.Session(
+    aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
+    aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
+    region_name=AWS_REGION
+)
 
-# --- CORE AI LOGIC (RETRY LOGIC & CONVERSE API) ---
-def ask_agrisutra(query):
-    """Sends query to Bedrock using confirmed Inference Profile."""
-    if not clients:
-        return "Offline Mode: AWS credentials not found. Please check your Secrets."
+bedrock = session.client('bedrock-runtime')  # For AI Logic
+transcribe = session.client('transcribe')    # For Voice-to-Text
+polly = session.client('polly')              # For Vernacular TTS
+s3 = session.client('s3')                    # For Audio Storage
+
+# --- 1. SPEECH-TO-TEXT: AMAZON TRANSCRIBE ---
+def transcribe_voice(audio_bytes, language_code):
+    """Uploads to S3 and triggers Amazon Transcribe for Indian Dialects."""
+    job_name = f"AgriSutra_Job_{int(time.time())}"
+    s3_key = f"recordings/{job_name}.wav"
     
-    # confirmed from your debug list
-    model_id = "us.anthropic.claude-3-haiku-20240307-v1:0"
+    # Upload to S3
+    s3.put_object(Bucket=S3_BUCKET, Key=s3_key, Body=audio_bytes)
+    audio_uri = f"s3://{S3_BUCKET}/{s3_key}"
+    
+    # Start Transcription
+    transcribe.start_transcription_job(
+        TranscriptionJobName=job_name,
+        Media={'MediaFileUri': audio_uri},
+        LanguageCode=language_code
+    )
+    
+    # Simple Polling for result
+    while True:
+        status = transcribe.get_transcription_job(TranscriptionJobName=job_name)
+        if status['TranscriptionJob']['TranscriptionJobStatus'] in ['COMPLETED', 'FAILED']:
+            break
+        time.sleep(1)
+        
+    if status['TranscriptionJob']['TranscriptionJobStatus'] == 'COMPLETED':
+        response = session.get(status['TranscriptionJob']['Transcript']['TranscriptFileUri'])
+        data = response.json()
+        return data['results']['transcripts'][0]['transcript']
+    return "Transcription failed."
 
-    # Exponential Backoff for stability
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            response = clients['runtime'].converse(
-                modelId=model_id,
-                messages=[{
-                    "role": "user",
-                    "content": [{"text": f"You are AgriSutra, an expert Indian Agronomist. Provide practical advice for: {query}"}]
-                }],
-                inferenceConfig={"maxTokens": 600, "temperature": 0.4}
-            )
-            return response['output']['message']['content'][0]['text']
-        except Exception as e:
-            if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)
-                continue
-            err_msg = str(e)
-            if "ValidationException" in err_msg:
-                return f"🚨 Profile Error: Although your account sees the profile, AWS is rejecting the 'On-Demand' call. Ensure you have 'Cross-region inference' enabled in the Ohio Bedrock Console."
-            return f"Bedrock Error: {err_msg}"
+# --- 2. AI CORE: AMAZON BEDROCK (CLAUDE 3 HAIKU) ---
+def get_agrisutra_advice(query, language):
+    """Uses Bedrock for intent detection and Trust Engine rules."""
+    system_prompt = f"""You are AgriSutra, a pro-farmer AI. Language: {language}.
+    Rules: 1. Block unsafe pesticides. 2. Provide weather-based action (Sentry logic).
+    3. Use simple rural analogies."""
+    
+    model_id = "anthropic.claude-3-haiku-20240307-v1:0" # Fast and affordable
+    
+    messages = [{"role": "user", "content": [{"text": query}]}]
+    
+    response = bedrock.converse(
+        modelId=model_id,
+        messages=messages,
+        system=[{"text": system_prompt}],
+        inferenceConfig={"maxTokens": 500, "temperature": 0.4}
+    )
+    return response['output']['message']['content'][0]['text']
 
-# --- UI HEADER & DASHBOARD ---
-st.title("🌾 AgriSutra: AI Field Intelligence")
-st.markdown("##### Bridging the gap between agricultural science and the farmer's field.")
+# --- 3. TEXT-TO-SPEECH: AMAZON POLLY ---
+def speak_vernacular(text, voice_id):
+    """Generates lifelike speech using Amazon Polly."""
+    response = polly.synthesize_speech(
+        Text=text,
+        OutputFormat='mp3',
+        VoiceId=voice_id,
+        Engine='neural' # Best quality for Indian languages
+    )
+    return response['AudioStream'].read()
 
-col_a, col_b, col_c = st.columns(3)
-with col_a: st.error("🌧️ **Weather Alert**\n\nHeavy showers expected within 48h. Ensure clear drainage.")
-with col_b: st.success("📈 **Market Update**\n\nWheat MSP has trended up by 7%. Consider holding stock.")
-with col_c: st.warning("🐜 **Pest Warning**\n\nYellow Rust reported nearby. Inspect wheat leaves.")
+# --- STREAMLIT UI ---
+st.title("🌾 AgriSutra (Full AWS)")
 
+# Voice Mapping for Polly
+languages = {
+    "Hindi (हिंदी)": {"code": "hi-IN", "voice": "Aditi"},
+    "Kannada (ಕನ್ನಡ)": {"code": "kn-IN", "voice": "N/A"}, # Note: Polly uses standard voices for some
+    "Tamil (தமிழ்)": {"code": "ta-IN", "voice": "N/A"},
+    "English": {"code": "en-IN", "voice": "Kajal"}
+}
+
+selected_lang = st.selectbox("Language / भाषा", list(languages.keys()))
+lang_data = languages[selected_lang]
+
+# Input Section
+audio_input = st.audio_input("Speak to AgriSutra")
+
+if audio_input:
+    with st.spinner("🤖 Processing with AWS..."):
+        # STT
+        text_query = transcribe_voice(audio_input.getvalue(), lang_data["code"])
+        st.write(f"**You said:** {text_query}")
+        
+        # Bedrock Logic
+        advice = get_agrisutra_advice(text_query, selected_lang)
+        st.success(f"**AgriSutra:** {advice}")
+        
+        # TTS
+        if lang_data["voice"] != "N/A":
+            audio_out = speak_vernacular(advice, lang_data["voice"])
+            st.audio(audio_out, format="audio/mp3")
+
+# Dashboard
 st.divider()
-
-# --- INTERACTION SECTION ---
-tab_voice, tab_text = st.tabs(["🎤 Voice Consultation", "⌨️ Text Consultation"])
-
-with tab_voice:
-    st.subheader("Speak to AgriSutra")
-    audio_data = mic_recorder(start_prompt="⏺️ Record Question", stop_prompt="⏹️ Analyze Query", just_once=True, key='agri_mic')
-
-    if audio_data:
-        st.audio(audio_data['bytes'], format='audio/wav')
-        with st.spinner("🤖 Analyzing voice..."):
-            advice = ask_agrisutra("Provide general seasonal crop protection advice.")
-            st.success("Analysis Complete!")
-            st.markdown(f"**AgriSutra Advice:**\n\n{advice}")
-            
-            tts = gTTS(text=advice, lang='en')
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-                tts.save(fp.name)
-                st.audio(fp.name)
-
-with tab_text:
-    st.subheader("Detailed Inquiry")
-    user_query = st.text_input("Ask a question:", placeholder="e.g. Best month to sow hemp?")
-    if st.button("Consult AI", type="primary"):
-        if user_query:
-            with st.spinner("Consulting..."):
-                answer = ask_agrisutra(user_query)
-                st.success("Done!")
-                st.markdown(f"**AgriSutra Advisor:**\n\n{answer}")
-                
-                tts = gTTS(text=answer, lang='en')
-                with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
-                    tts.save(fp.name)
-                    st.audio(fp.name)
-        else:
-            st.warning("Please enter a question.")
-
-st.divider()
-st.caption("Architecture: Streamlit -> S3 -> Bedrock (Claude 3 Haiku via Converse API)")
+st.error("🌧️ **Sentry Agent:** Rain expected in 3 hours. Drain your fields.")
