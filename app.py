@@ -197,27 +197,39 @@ st.info("**Try asking:** 'Should I use Monocrotophos on my crops?' (Tests the Tr
 
 st.markdown("### 💬 Text Chat Mode")
 text_query = st.text_input("Type your query here", placeholder="e.g. When is the best time to sow hemp?")
-# --- 6. EXECUTION LOGIC (FIXED) ---
+# --- 6. EXECUTION LOGIC (UPDATED) ---
 final_query = None
 
-# 1. Handle Voice Input first
+# 1. First, check for voice input
 if audio_data:
     with st.spinner("🎙️ Transcribing audio..."):
-        voice_transcript = run_stt(audio_data.getvalue(), lang_data["code"])
-        if voice_transcript:
-            final_query = voice_transcript
+        final_query = run_stt(audio_data.getvalue(), lang_data["code"])
+        if final_query:
             st.success(f"**Heard:** {final_query}")
 
-# 2. Handle Text Input (PRIORITY OVERRIDE)
-# Changing 'elif' to 'if' ensures that if the user types something, 
-# it overwrites any sticky voice transcripts in the current run.
+# 2. IMPORTANT: Use 'if' instead of 'elif' to allow text to override voice
 if text_query:
     final_query = text_query
 
-# 3. Process the Query (Final result from either Voice or Text)
+# 3. Only process if we have a query from either source
 if final_query:
     with st.spinner("🧠 Orchestrator routing query..."):
+        # Process through Orchestrator (includes Sentry, Budgeting, Trust Engine)
         advice, is_safe = orchestrator.process_query(final_query, selected_lang)
+        
+        st.markdown("---")
+        if not is_safe:
+            st.error(advice)
+        else:
+            st.markdown("#### 🌾 AgriSutra Advice:")
+            st.write(advice)
+            
+            # Generate Audio if safe and voice is configured
+            if lang_data["voice"] != "N/A":
+                with st.spinner("🔊 Generating voice..."):
+                    audio_response = synthesize_speech(advice, lang_data["voice"])
+                    if audio_response:
+                        st.audio(audio_response, format="audio/mp3")
 # Sentry Dashboard Widget
 st.divider()
 st.error("⚠️ **Sentry Alert:** Heavy rain expected in Bengaluru. Ensure field drainage is clear.")
