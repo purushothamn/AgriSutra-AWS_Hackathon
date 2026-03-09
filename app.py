@@ -231,4 +231,4 @@ if final_query:
 
 # Sentry Dashboard Widget
 st.divider()
-st.markdown("<div style='background-color:#ffebee; padding:10px; border-left: 5px solid #f44336;'>⚠️ <b>Sentry Alert:</b> Heavy rain expected in Bengaluru. Ensure field drainage is clear.</div>", unsafe_allow_html=True)
+st.error("⚠️ **Sentry Alert:** Heavy rain expected in Bengaluru. Ensure field drainage is clear.")
