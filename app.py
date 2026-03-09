@@ -19,6 +19,7 @@ from streamlit_mic_recorder import mic_recorder
 def get_aws_clients():
     """Initializes AWS clients using Streamlit Secrets."""
     try:
+        # Use the region where your model access is granted (Ohio: us-east-2)
         session = boto3.Session(
             aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
             aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
@@ -26,8 +27,8 @@ def get_aws_clients():
         )
         return {
             "s3": session.client('s3'),
-            "bedrock": session.client('bedrock'), # Management client
-            "runtime": session.client('bedrock-runtime') # Execution client
+            "bedrock": session.client('bedrock'), # For management tasks
+            "runtime": session.client('bedrock-runtime') # For model execution
         }
     except Exception as e:
         st.sidebar.error(f"AWS Configuration Error: {e}")
@@ -60,17 +61,16 @@ def ask_agrisutra(query):
     if not clients:
         return "Offline Mode: AWS credentials not found. Please check your Secrets."
     
-    # We try the Inference Profile first, fallback to standard if it fails
-    # NOTE: Ensure 'Claude 3 Haiku' is enabled in us-east-2 (Ohio) Bedrock Console!
+    # Using the verified Inference Profile ID from your debug list
     model_id = "us.anthropic.claude-3-haiku-20240307-v1:0"
 
     try:
-        # Using the Converse API instead of InvokeModel for better handling
+        # The Converse API is the best way to avoid 'ValidationException' with profiles
         response = clients['runtime'].converse(
             modelId=model_id,
             messages=[{
                 "role": "user",
-                "content": [{"text": f"You are AgriSutra, an expert Indian Agronomist. Provide practical advice for: {query}"}]
+                "content": [{"text": f"You are AgriSutra, an expert Indian Agronomist. Provide practical, accurate advice for: {query}"}]
             }],
             inferenceConfig={"maxTokens": 600, "temperature": 0.4}
         )
@@ -78,13 +78,14 @@ def ask_agrisutra(query):
     except Exception as e:
         err_msg = str(e)
         if "ValidationException" in err_msg:
-            return f"🚨 AWS Config Error: Your region (us-east-2) requires an Inference Profile. Please go to Bedrock Console -> Model Access and ensure Claude 3 Haiku is 'Access Granted'."
+            return f"🚨 AWS Routing Error: Please ensure 'Claude 3 Haiku' access is granted in your Ohio (us-east-2) console specifically for Cross-region inference."
         return f"Bedrock Error: {err_msg}"
 
 # --- UI HEADER & DASHBOARD ---
 st.title("🌾 AgriSutra: AI Field Intelligence")
 st.markdown("##### Bridging the gap between agricultural science and the farmer's field.")
 
+# Intelligence Widgets
 col_a, col_b, col_c = st.columns(3)
 with col_a: st.error("🌧️ **Weather Alert**\n\nHeavy showers expected within 48h. Ensure clear drainage.")
 with col_b: st.success("📈 **Market Update**\n\nWheat MSP has trended up by 7%. Consider holding stock.")
@@ -102,9 +103,12 @@ with tab_voice:
     if audio_data:
         st.audio(audio_data['bytes'], format='audio/wav')
         with st.spinner("🤖 Analyzing voice..."):
+            # Real AI logic (triggered by voice event)
             advice = ask_agrisutra("Provide general seasonal crop protection advice.")
             st.success("Analysis Complete!")
             st.markdown(f"**AgriSutra Advice:**\n\n{advice}")
+            
+            # Voice Output
             tts = gTTS(text=advice, lang='en')
             with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
                 tts.save(fp.name)
@@ -117,11 +121,16 @@ with tab_text:
         if user_query:
             with st.spinner("Consulting..."):
                 answer = ask_agrisutra(user_query)
+                st.success("Done!")
                 st.markdown(f"**AgriSutra Advisor:**\n\n{answer}")
+                
+                # Audio Playback
                 tts = gTTS(text=answer, lang='en')
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as fp:
                     tts.save(fp.name)
                     st.audio(fp.name)
+        else:
+            st.warning("Please enter your question.")
 
 st.divider()
 st.caption("Architecture: Streamlit -> S3 -> Bedrock (Claude 3 Haiku via Converse API)")
