@@ -1,5 +1,2 @@
 streamlit
 boto3
-gTTS
-streamlit-mic-recorder
-requests
