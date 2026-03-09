@@ -1,5 +1,5 @@
 streamlit
+boto3
 gTTS
 streamlit-mic-recorder
-boto3
 requests
