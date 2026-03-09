@@ -75,8 +75,11 @@ def run_stt(audio_bytes, lang_code):
             time.sleep(1.5)
             
         if job_status == 'COMPLETED':
-            res = session.get(status['TranscriptionJob']['Transcript']['TranscriptFileUri'])
-            return res.json()['results']['transcripts'][0]['transcript']
+            # FIX: Use built-in urllib to fetch the JSON file instead of boto3 session
+            transcript_uri = status['TranscriptionJob']['Transcript']['TranscriptFileUri']
+            with urllib.request.urlopen(transcript_uri) as response:
+                data = json.loads(response.read().decode('utf-8'))
+                return data['results']['transcripts'][0]['transcript']
         return None
     except Exception as e:
         st.error(f"Transcription Error: {e}")
