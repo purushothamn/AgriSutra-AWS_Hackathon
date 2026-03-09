@@ -37,7 +37,7 @@ try:
     session = boto3.Session(
         aws_access_key_id=st.secrets["AWS_ACCESS_KEY_ID"],
         aws_secret_access_key=st.secrets["AWS_SECRET_ACCESS_KEY"],
-        region_name=st.secrets.get("AWS_DEFAULT_REGION", "us-east-1")
+        region_name=st.secrets.get("AWS_DEFAULT_REGION", "us-east-2")
     )
     bedrock = session.client('bedrock-runtime')
     transcribe = session.client('transcribe')
